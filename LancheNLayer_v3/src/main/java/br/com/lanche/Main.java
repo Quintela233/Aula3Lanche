@@ -37,15 +37,13 @@ public class Main {
     }
 
     public static int solicitaOpcaoMenu() {
-        System.out.println("Informe a opção escoliha: ");
+        System.out.println("Informe a opção escolhida: ");
         return scanner.nextInt();
     }
 
     public static void listarLanches() throws IOException {
         System.out.println("Lista de Produtos:\n(ID -- Nome -- Preço)\n");
-        lancheFacade.buscarTodos().forEach(l -> {
-            System.out.println(l);
-        });
+        lancheFacade.buscarTodos().forEach(System.out::println);
     }
 
     public static void cadastrarLanche() throws IOException {
@@ -61,7 +59,6 @@ public class Main {
         scanner.nextLine();
 
         String caminhoImagem;
-
         do {
             System.out.print("Digite o caminho completo da imagem (ex: C:\\pasta\\hamburguer.jpg): ");
             caminhoImagem = scanner.nextLine();
@@ -72,7 +69,6 @@ public class Main {
         } while (!new File(caminhoImagem).exists());
 
         salvarImagem(id, caminhoImagem);
-
         String caminhoFinal = "imagens/" + id + caminhoImagem.substring(caminhoImagem.lastIndexOf("."));
 
         Lanche lanche = new Lanche(id, nome, preco, caminhoFinal);
@@ -93,22 +89,26 @@ public class Main {
         System.out.println("Novo Nome do produto: ");
         String nome = scanner.nextLine();
 
-        System.out.println("Novo Preco do produto: ");
+        System.out.println("Novo Preço do produto: ");
         double preco = scanner.nextDouble();
         scanner.nextLine();
 
-        System.out.println("Novo Caminho Imagem: ");
-        String caminhoImagem = scanner.nextLine();
+        System.out.println("Deseja alterar a imagem? (s/n): ");
+        String alterarImagem = scanner.nextLine();
 
         String caminhoFinal = antigo.getCaminhoImagem();
-        if (!caminhoImagem.isEmpty()) {
+        if (alterarImagem.equalsIgnoreCase("s")) {
+            System.out.println("Digite o novo caminho completo da imagem: ");
+            String novoCaminhoImagem = scanner.nextLine();
+
             excluirImagem(antigo.getCaminhoImagem());
-            salvarImagem(id, caminhoImagem);
-            caminhoFinal = "imagens/" + id + caminhoImagem.substring(caminhoImagem.lastIndexOf("."));
+            salvarImagem(id, novoCaminhoImagem);
+            caminhoFinal = "imagens/" + id + novoCaminhoImagem.substring(novoCaminhoImagem.lastIndexOf("."));
         }
 
         Lanche lanche = new Lanche(id, nome, preco, caminhoFinal);
         lancheFacade.atualizar(id, lanche);
+        System.out.println("Produto atualizado com sucesso!");
     }
 
     public static void excluirLanche() throws IOException {
@@ -135,38 +135,29 @@ public class Main {
         scanner.nextLine();
 
         Lanche lanche = lancheFacade.buscarPorId(id);
+        if (lanche == null) {
+            System.out.println("Produto não encontrado!");
+            return;
+        }
 
         double total = lancheFacade.calcularTotal(lanche, quantidade);
-        System.out.println("Total do lanche: " + total);
+        System.out.println("Total do lanche: R$" + total);
     }
 
-
     public static void iniciarSistema() throws IOException {
-        int opcaoMenu = -1;
-
+        int opcaoMenu;
         do {
             exibirMenu();
-
             opcaoMenu = solicitaOpcaoMenu();
 
             switch (opcaoMenu) {
-                case 1:
-                    listarLanches();
-                    break;
-                case 2:
-                    cadastrarLanche();
-                    break;
-                case 3:
-                    atualizarLanche();
-                    break;
-                case 4:
-                    excluirLanche();
-                    break;
-                case 5:
-                    venderLanche();
-                    break;
-                default:
-                    break;
+                case 1 -> listarLanches();
+                case 2 -> cadastrarLanche();
+                case 3 -> atualizarLanche();
+                case 4 -> excluirLanche();
+                case 5 -> venderLanche();
+                case 0 -> System.out.println("Saindo do sistema...");
+                default -> System.out.println("Opção inválida!");
             }
         } while (opcaoMenu != 0);
     }
@@ -175,10 +166,16 @@ public class Main {
         injetarDependencias();
         iniciarSistema();
     }
+
     public static void salvarImagem(int id, String caminhoOrigem) throws IOException {
         File origem = new File(caminhoOrigem);
         if (!origem.exists()) {
             throw new IOException("Imagem não encontrada!");
+        }
+
+        String extensao = caminhoOrigem.substring(caminhoOrigem.lastIndexOf(".")).toLowerCase();
+        if (!extensao.matches("\\.(jpg|jpeg|png|gif|bmp)")) {
+            throw new IOException("Formato de imagem não suportado!");
         }
 
         File pastaDestino = new File("imagens");
@@ -186,18 +183,24 @@ public class Main {
             pastaDestino.mkdirs();
         }
 
-
-        String extensao = caminhoOrigem.substring(caminhoOrigem.lastIndexOf("."));
         File destino = new File(pastaDestino, id + extensao);
-
         java.nio.file.Files.copy(origem.toPath(), destino.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
 
     public static void excluirImagem(String caminhoImagem) {
         File arquivo = new File(caminhoImagem);
+        if (!arquivo.isAbsolute()) {
+            arquivo = new File(System.getProperty("user.dir"), caminhoImagem);
+        }
+
         if (arquivo.exists()) {
-            arquivo.delete();
+            if (arquivo.delete()) {
+                System.out.println("Imagem excluída com sucesso: " + arquivo.getPath());
+            } else {
+                System.out.println("Falha ao excluir a imagem: " + arquivo.getPath());
+            }
+        } else {
+            System.out.println("Imagem não encontrada para exclusão: " + arquivo.getPath());
         }
     }
-
 }
